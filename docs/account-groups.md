@@ -24,6 +24,7 @@ codex-auth group list
 codex-auth group <name> status
 codex-auth group create <name> [<account>...]
 codex-auth group <name> login [--device-auth]
+codex-auth group <name> add-api-key --template openai|codex-everywhere --alias <alias>
 codex-auth group <name> add <account> [<account>...]
 codex-auth group <name> copy [<account>...]
 codex-auth group <name> move [<account>...]
@@ -34,6 +35,7 @@ codex-auth group <name> switch [--live] [--auto] [--api|--skip-api]
 codex-auth group <name> switch <query>
 codex-auth group <name> auto enable|disable
 codex-auth group <name> auto --5h <percent> [--weekly <percent>]
+codex-auth group <name> config api-spend-limit <api-account> <amount>
 codex-auth group <name> launch [resume [session]] [-- <codext-arg>...]
 codex-auth group archive <name>
 codex-auth group delete <name> --force
@@ -76,6 +78,27 @@ The group must already exist. Create it first with `codex-auth group create work
 In an interactive terminal, if there are unused folders under `~/codex-auth/groups/`, the command shows them and lets the user attach `work` to one of those folders. If no unused folder is selected, it asks for a new folder name and defaults to `work`.
 
 In non-interactive mode, `group create work` uses `~/codex-auth/groups/work`.
+
+## Adding API Keys
+
+Use `add-api-key` to add an OpenAI-compatible API key directly to a group without creating an auth JSON file first:
+
+```sh
+codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2
+codex-auth group default add-api-key --template openai --alias openai-main
+```
+
+The command prompts for the key in an interactive terminal. For scripts, pipe the key and pass `--stdin`:
+
+```sh
+printf '%s' "$CODEX_EVERYWHERE_API_KEY" | codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2 --stdin
+```
+
+Supported templates are `openai` and `codex-everywhere`. The codex-everywhere template uses `https://codex-everywhere.com/` and defaults to a `$50` spend limit. Update a cap later with:
+
+```sh
+codex-auth group default config api-spend-limit codex-everywhere-2 50
+```
 
 ## Adding Existing Accounts
 

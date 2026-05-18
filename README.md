@@ -115,12 +115,14 @@ See [docs/account-groups.md](./docs/account-groups.md) for the full command refe
 | `codex-auth group create <name> [<account>...]` | Create a group and optionally copy existing accounts into it |
 | `codex-auth group <name> list [--live] [--api\|--skip-api]` | List accounts in one group |
 | `codex-auth group <name> login [--device-auth]` | Login and add the account directly to one group |
+| `codex-auth group <name> add-api-key --template openai\|codex-everywhere --alias <alias>` | Add an API key directly to one group |
 | `codex-auth group <name> add <account> [<account>...]` | Copy accounts from another group into this group |
 | `codex-auth group <name> copy [<account>...]` | Copy accounts into this group; without selectors, choose interactively |
 | `codex-auth group <name> move [<account>...]` | Move accounts into this group; without selectors, choose interactively |
 | `codex-auth group <name> switch [--live] [--auto] [--api\|--skip-api]` | Switch the active account inside one group |
 | `codex-auth group <name> auto enable\|disable` | Enable or disable background auto-switching for one group |
 | `codex-auth group <name> config api enable\|disable` | Enable or disable usage and account APIs for one group |
+| `codex-auth group <name> config api-spend-limit <api-account> <amount>` | Set or update an API-key dollar spend limit inside one group |
 | `codex-auth group <name> status` | Show auto-switch and usage status for one group |
 | `codex-auth group <name> launch [resume [session]] [-- <codext-arg>...]` | Launch `codext` with this group's `CODEX_HOME` |
 | `codex-auth project set-group <name>` | Remember a group for the current project directory |
@@ -130,8 +132,8 @@ See [docs/account-groups.md](./docs/account-groups.md) for the full command refe
 
 | Command | Description |
 |---------|-------------|
-| `codex-auth import <path> [--alias <alias>]` | Import a single file or batch import from a folder |
-| `codex-auth import --cpa [<path>]` | Import [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) (CPA) token JSON |
+| `codex-auth import <path> [--alias <alias>] [--api-spend-limit-usd <amount>]` | Import a single file or batch import from a folder |
+| `codex-auth import --cpa [<path>] [--api-spend-limit-usd <amount>]` | Import [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) (CPA) token JSON |
 | `codex-auth import --purge [<path>]` | Rebuild `registry.json` from existing auth files |
 
 ### Configuration
@@ -254,12 +256,38 @@ codex-auth login --group work --device-auth
 
 `--group <name>` creates the group when needed and stores the logged-in account in that group's Codex home.
 
+#### Direct API-Key Add
+
+Add an API key without creating a JSON file:
+
+```shell
+codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2
+codex-auth group default add-api-key --template openai --alias openai-main
+```
+
+When run in an interactive terminal, `add-api-key` prompts for the API key and hides input. You can also pipe the key:
+
+```shell
+printf '%s' "$CODEX_EVERYWHERE_API_KEY" | codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2 --stdin
+printf '%s' "$OPENAI_API_KEY" | codex-auth group default add-api-key --template openai --alias openai-main --stdin
+```
+
+Supported templates are `openai` and `codex-everywhere`. The codex-everywhere template uses `https://codex-everywhere.com/` and defaults the spend limit to `$50`; override it with `--api-spend-limit-usd <amount>`.
+
 ### Import
 
 #### Single File
 
 ```shell
 codex-auth import /path/to/auth.json --alias personal
+codex-auth import /path/to/api-auth.json --alias codex-everywhere --api-spend-limit-usd 50
+```
+
+For API-key imports, `--api-spend-limit-usd <amount>` stores a dollar cap on the imported API key. When the API reports HTTP 429 or the tracked spend reaches that cap, the account is marked exhausted so account switching can move to the next usable account.
+For an API key that was already added, set or update the cap with:
+
+```shell
+codex-auth group default config api-spend-limit codex-everywhere 50
 ```
 
 #### Batch Import from a Folder
