@@ -84,11 +84,12 @@ In non-interactive mode, `group create work` uses `~/codex-auth/groups/work`.
 Use `add-api-key` to add an OpenAI-compatible API key directly to a group without creating an auth JSON file first:
 
 ```sh
+codex-auth group default add-api-key
 codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2
 codex-auth group default add-api-key --template openai --alias openai-main
 ```
 
-The command prompts for the key in an interactive terminal. For scripts, pipe the key and pass `--stdin`:
+With no flags, the command asks whether to use the OpenAI template, the codex-everywhere template, or a custom provider, then prompts for alias, optional limit, and the key. For scripts, pipe the key and pass `--stdin`:
 
 ```sh
 printf '%s' "$CODEX_EVERYWHERE_API_KEY" | codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2 --stdin

@@ -261,11 +261,12 @@ codex-auth login --group work --device-auth
 Add an API key without creating a JSON file:
 
 ```shell
+codex-auth group default add-api-key
 codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2
 codex-auth group default add-api-key --template openai --alias openai-main
 ```
 
-When run in an interactive terminal, `add-api-key` prompts for the API key and hides input. You can also pipe the key:
+When run without flags in an interactive terminal, `add-api-key` asks whether to use the OpenAI template, the codex-everywhere template, or a custom provider, then prompts for alias, optional limit, and the API key. The API-key prompt hides input. You can also pipe the key:
 
 ```shell
 printf '%s' "$CODEX_EVERYWHERE_API_KEY" | codex-auth group default add-api-key --template codex-everywhere --alias codex-everywhere-2 --stdin

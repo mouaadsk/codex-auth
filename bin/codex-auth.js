@@ -604,11 +604,12 @@ function parseAddApiKeyArgs(args) {
   const options = {
     alias: "",
     email: "",
-    template: "openai",
+    template: null,
     baseUrl: null,
     spendLimitUsd: null,
     apiKey: null,
-    stdin: false
+    stdin: false,
+    interactive: args.length === 0
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -663,7 +664,11 @@ function parseAddApiKeyArgs(args) {
     process.exit(1);
   }
 
-  const template = apiKeyTemplate(options.template);
+  if (options.interactive) {
+    populateInteractiveAddApiKeyOptions(options);
+  }
+
+  const template = apiKeyTemplate(options.template ?? "openai");
   if (!template) {
     console.error("--template must be either openai or codex-everywhere.");
     process.exit(1);
@@ -675,6 +680,79 @@ function parseAddApiKeyArgs(args) {
   }
 
   return options;
+}
+
+function readLineFromTty(prompt) {
+  process.stderr.write(prompt);
+  const chunks = [];
+  const buf = Buffer.alloc(1);
+  while (true) {
+    const n = fs.readSync(0, buf, 0, 1, null);
+    if (n === 0) break;
+    if (buf[0] === 10 || buf[0] === 13) break;
+    chunks.push(Buffer.from(buf));
+  }
+  return Buffer.concat(chunks).toString("utf8").trim();
+}
+
+function requireInteractiveTty(command) {
+  if (!process.stdin.isTTY || !process.stderr.isTTY) {
+    console.error(`${command} requires an interactive terminal, or pass --template/--alias/--stdin explicitly.`);
+    process.exit(1);
+  }
+}
+
+function parsePositiveMoney(value, label) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(`${label} must be a positive dollar amount.`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+function promptTemplateName() {
+  process.stderr.write("API key add mode:\n");
+  process.stderr.write("  1) Use template: OpenAI\n");
+  process.stderr.write("  2) Use template: Codex-Everywhere\n");
+  process.stderr.write("  3) Custom provider (current/manual behavior)\n");
+  while (true) {
+    const choice = readLineFromTty("Choose [1-3]: ");
+    if (choice === "" || choice === "1") return "openai";
+    if (choice === "2") return "codex-everywhere";
+    if (choice === "3") return "custom";
+    process.stderr.write("Please choose 1, 2, or 3.\n");
+  }
+}
+
+function populateInteractiveAddApiKeyOptions(options) {
+  requireInteractiveTty("add-api-key");
+  const templateName = promptTemplateName();
+  if (templateName === "custom") {
+    options.template = "openai";
+    const baseUrl = readLineFromTty("Base URL [https://api.openai.com/v1]: ");
+    options.baseUrl = baseUrl || "https://api.openai.com/v1";
+  } else {
+    options.template = templateName;
+  }
+
+  const alias = readLineFromTty("Alias: ");
+  if (alias) options.alias = alias;
+
+  const email = readLineFromTty("Display email/name [same as alias]: ");
+  if (email) options.email = email;
+
+  const template = apiKeyTemplate(options.template);
+  const defaultLimit = template?.defaultSpendLimitUsd;
+  const limitPrompt = Number.isFinite(defaultLimit)
+    ? `Spend limit USD [${defaultLimit}]: `
+    : "Spend limit USD [none]: ";
+  const limit = readLineFromTty(limitPrompt);
+  if (limit) {
+    options.spendLimitUsd = parsePositiveMoney(limit, "Spend limit");
+  } else if (Number.isFinite(defaultLimit)) {
+    options.spendLimitUsd = defaultLimit;
+  }
 }
 
 function readApiKeyForAdd(options) {
